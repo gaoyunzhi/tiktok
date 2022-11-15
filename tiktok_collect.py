@@ -8,8 +8,7 @@ import plain_db
 import album_sender
 import time
 import to_album
-import pytumblr
-from bs4 import BeautifulSoup
+from TikTokApi import TikTokApi
 import cached_url
 from telegram_util import AlbumResult as Result
 
@@ -22,14 +21,8 @@ with open('db/setting') as f:
 existing = plain_db.loadKeyOnlyDB('existing')
 tele = Updater(credential['bot_token'], use_context=True)
 debug_group = tele.bot.get_chat(credential['debug_group'])
-translate_channel = tele.bot.get_chat(credential['translate_channel'])
 
-client = pytumblr.TumblrRestClient(
-    credential['consumer_key'],
-    credential['consumer_secret'],
-    credential['token'],
-    credential['token_secret'],
-)
+api = TikTokApi()
 
 def tryPost(channel, post, sub_setting):
 	url = post['post_url']
@@ -67,18 +60,11 @@ def run():
 	sent = False
 	for channel_id, channel_setting in setting.items():
 		channel = tele.bot.get_chat(channel_id)
-		for tag, sub_setting in channel_setting.get('tag', {}).items():
-			soup = BeautifulSoup(
-				cached_url.get('https://www.tumblr.com/search/' + tag), 'html.parser')
-			for blog_name, post_id in getPostIds(soup, sub_setting):
-				try:
-					post = client.posts(blog_name, id = post_id)['posts'][0]
-				except:
-					continue
-				tryPost(channel, post, sub_setting)
 		for people, sub_setting in channel_setting.get('people', {}).items():
-			for post in client.posts(people)['posts']:
-				tryPost(channel, post, sub_setting)
+			user = api.user(people)
+			print(user)
+			# for post in client.posts(people)['posts']:
+			# 	tryPost(channel, post, sub_setting)
 		
 if __name__ == '__main__':
 	run()
